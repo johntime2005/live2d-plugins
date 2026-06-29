@@ -37,11 +37,11 @@ const loadLive2DWidget = async () => {
     style.textContent = `
       #live2d {
         position: fixed;
-        right: 0;
-        bottom: 0;
-        width: 200px;
-        height: 400px;
-        z-index: 9999;
+        left: 10px;
+        bottom: 10px;
+        width: 160px;
+        height: 320px;
+        z-index: 1;
       }
     `
     document.head.appendChild(style)

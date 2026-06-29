@@ -28,28 +28,41 @@ function loadExternalResource(url, type) {
 
 const loadLive2DWidget = async () => {
   if (screen.width < 768) return
-  if (document.getElementById('live2d')) return
+  if (document.getElementById('chtholly-wrapper')) return
 
   try {
     await loadExternalResource(LIVE2D_CDN + 'live2d.min.js', 'js')
 
     const style = document.createElement('style')
     style.textContent = `
-      #live2d {
+      #chtholly-wrapper {
         position: fixed;
-        bottom: 0;
-        right: 0;
+        bottom: 80px;
+        right: 20px;
+        width: 250px;
+        height: 400px;
+        overflow: hidden;
         z-index: 9999;
-        /* 不缩放不裁剪，直接显示原始尺寸 */
+      }
+      #chtholly-wrapper canvas {
+        display: block;
+        width: 250px;
+        height: 250px;
+        transform: translateY(-50px);
       }
     `
     document.head.appendChild(style)
 
+    const wrapper = document.createElement('div')
+    wrapper.id = 'chtholly-wrapper'
+
     const canvas = document.createElement('canvas')
     canvas.id = 'live2d'
-    canvas.width = 300
-    canvas.height = 300
-    document.body.appendChild(canvas)
+    canvas.width = 800
+    canvas.height = 800
+    wrapper.appendChild(canvas)
+
+    document.body.appendChild(wrapper)
 
     await new Promise(r => setTimeout(r, 100))
 

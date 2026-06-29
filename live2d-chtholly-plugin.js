@@ -1,48 +1,48 @@
-/** @type {EsmPlugin} */
-export default (Plugin) => {
-  const appStore = Plugins.useAppStore()
+/**
+ * 本插件使用项目：https://github.com/stevenjoezhang/live2d-widget
+ * 珂朵莉模型来源：https://github.com/akikowork/chtholly_kanban
+ * 另外：插件系统不推荐动态载入js、css，因此此插件并不符合规范！
+ */
 
-  /* 触发器 手动触发 */
-  const onRun = () => {
-    loadLive2D()
-  }
+const loadLive2DWidget = async () => {
+  const scritp = document.createElement('script')
+  scritp.innerHTML = /* javascript */ `
+  // live2d_path 参数建议使用绝对路径
+  const live2d_path = 'https://fastly.jsdelivr.net/gh/stevenjoezhang/live2d-widget@latest/'
 
-  /* 触发器 APP就绪后 */
-  const onReady = () => {
-    if (Plugin.AutoStart) {
-      loadLive2D()
-    }
-  }
+  // 封装异步加载资源的方法
+  function loadExternalResource(url, type) {
+    return new Promise((resolve, reject) => {
+      let tag
 
-  const loadLive2D = () => {
-    // 检查是否已加载
-    if (document.getElementById('waifu')) return
-
-    // 珂朵莉模型配置
-    const modelJson = 'https://cdn.jsdelivr.net/gh/akikowork/chtholly_kanban@master/chtholly/assets/chtholly.model.json'
-
-    // 加载 CSS
-    const link = document.createElement('link')
-    link.rel = 'stylesheet'
-    link.href = 'https://fastly.jsdelivr.net/gh/stevenjoezhang/live2d-widget@latest/waifu.css'
-    document.head.appendChild(link)
-
-    // 加载 JS
-    const loadScript = (src) => new Promise((resolve, reject) => {
-      const s = document.createElement('script')
-      s.src = src
-      s.onload = resolve
-      s.onerror = reject
-      document.head.appendChild(s)
+      if (type === 'css') {
+        tag = document.createElement('link')
+        tag.rel = 'stylesheet'
+        tag.href = url
+      } else if (type === 'js') {
+        tag = document.createElement('script')
+        tag.src = url
+      }
+      if (tag) {
+        tag.onload = () => resolve(url)
+        tag.onerror = () => reject(url)
+        document.head.appendChild(tag)
+      }
     })
+  }
 
+  // 加载 waifu.css live2d.min.js waifu-tips.js
+  if (screen.width >= 768) {
     Promise.all([
-      loadScript('https://fastly.jsdelivr.net/gh/stevenjoezhang/live2d-widget@latest/live2d.min.js'),
-      loadScript('https://fastly.jsdelivr.net/gh/stevenjoezhang/live2d-widget@latest/waifu-tips.js'),
+      loadExternalResource(live2d_path + 'waifu.css', 'css'),
+      loadExternalResource(live2d_path + 'live2d.min.js', 'js'),
+      loadExternalResource(live2d_path + 'waifu-tips.js', 'js')
     ]).then(() => {
-      initWidget({
+      // 配置选项的具体用法见 README.md
+      const options = {
+        // 直接指定珂朵莉模型路径
         model: {
-          jsonPath: modelJson
+          jsonPath: 'https://cdn.jsdelivr.net/gh/akikowork/chtholly_kanban@master/chtholly/assets/chtholly.model.json'
         },
         display: {
           position: 'right',
@@ -52,10 +52,54 @@ export default (Plugin) => {
         mobile: {
           show: false,
         },
-        tools: ['switch-model', 'switch-texture', 'quit']
-      })
-    }).catch(err => {
-      console.error('Live2D 加载失败:', err)
+        tools: ['switch-texture', 'quit']
+      }
+      if(${Plugin.DisableMessage ? 'false' : 'true'}) {
+          options.waifuPath = live2d_path + "waifu-tips.json"
+      }
+      initWidget(options)
     })
   }
+  `
+
+  document.body.appendChild(scritp)
+
+  // 循环查找dom
+  let changeModelBtn = null
+  let tryCount = 0
+  while (!changeModelBtn && tryCount < 10) {
+    changeModelBtn = document.getElementById('waifu-tool-switch-model')
+    if (changeModelBtn) break
+    tryCount += 1
+    await Plugins.sleep(1000)
+  }
+
+  // 点击切换模型按钮时，获取模型ID，然后APP换肤
+  const colorMap = {
+    5: 'rgb(166,131,216)',
+    6: 'rgb(212,224,236)',
+    0: 'rgb(80,60,83)',
+    1: 'rgb(250,245,132)',
+    2: 'rgb(93,147,219)',
+    3: 'rgba(116,194,255)',
+    4: 'rgb(209,122,83)'
+  }
+
+  if (changeModelBtn) {
+    changeModelBtn.onclick = () => {
+      const modelId = localStorage.getItem('modelId')
+      const modelTexturesId = localStorage.getItem('modelTexturesId')
+      console.log(modelId, modelTexturesId)
+      document.documentElement.style.setProperty('--primary-color', colorMap[modelId])
+      document.documentElement.style.setProperty('--secondary-color', colorMap[modelId])
+    }
+  }
+}
+
+const onRun = async () => {
+  await loadLive2DWidget()
+}
+
+const onReady = () => {
+  Plugin.AutoStart && loadLive2DWidget()
 }

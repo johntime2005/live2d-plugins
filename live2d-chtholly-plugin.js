@@ -2,97 +2,94 @@
  * 本插件使用项目：https://github.com/stevenjoezhang/live2d-widget
  * 珂朵莉模型来源：https://github.com/akikowork/chtholly_kanban
  * 另外：插件系统不推荐动态载入js、css，因此此插件并不符合规范！
+ *
+ * === 修复说明 ===
+ * 原版 bug: initWidget() 只认 apiPath / cdnPath，不认 model.jsonPath
+ * 修复方案: 跳过 waifu-tips.js（widget wrapper），直接用 live2d.min.js 的 loadlive2d()
  */
 
-const loadLive2DWidget = async () => {
-  const scritp = document.createElement('script')
-  scritp.innerHTML = /* javascript */ `
-  // live2d_path 参数建议使用绝对路径
-  const live2d_path = 'https://fastly.jsdelivr.net/gh/stevenjoezhang/live2d-widget@latest/'
+const CTHOLLY_MODEL_URL = 'https://cdn.jsdelivr.net/gh/akikowork/chtholly_kanban@master/chtholly/assets/chtholly.model.json'
+const LIVE2D_CDN = 'https://fastly.jsdelivr.net/gh/stevenjoezhang/live2d-widget@latest/'
 
-  // 封装异步加载资源的方法
-  function loadExternalResource(url, type) {
-    return new Promise((resolve, reject) => {
-      let tag
-
-      if (type === 'css') {
-        tag = document.createElement('link')
-        tag.rel = 'stylesheet'
-        tag.href = url
-      } else if (type === 'js') {
-        tag = document.createElement('script')
-        tag.src = url
-      }
-      if (tag) {
-        tag.onload = () => resolve(url)
-        tag.onerror = () => reject(url)
-        document.head.appendChild(tag)
-      }
-    })
-  }
-
-  // 加载 waifu.css live2d.min.js waifu-tips.js
-  if (screen.width >= 768) {
-    Promise.all([
-      loadExternalResource(live2d_path + 'waifu.css', 'css'),
-      loadExternalResource(live2d_path + 'live2d.min.js', 'js'),
-      loadExternalResource(live2d_path + 'waifu-tips.js', 'js')
-    ]).then(() => {
-      // 配置选项的具体用法见 README.md
-      const options = {
-        // 直接指定珂朵莉模型路径
-        model: {
-          jsonPath: 'https://cdn.jsdelivr.net/gh/akikowork/chtholly_kanban@master/chtholly/assets/chtholly.model.json'
-        },
-        display: {
-          position: 'right',
-          width: 200,
-          height: 400,
-        },
-        mobile: {
-          show: false,
-        },
-        tools: ['switch-texture', 'quit']
-      }
-      if(${Plugin.DisableMessage ? 'false' : 'true'}) {
-          options.waifuPath = live2d_path + "waifu-tips.json"
-      }
-      initWidget(options)
-    })
-  }
-  `
-
-  document.body.appendChild(scritp)
-
-  // 循环查找dom
-  let changeModelBtn = null
-  let tryCount = 0
-  while (!changeModelBtn && tryCount < 10) {
-    changeModelBtn = document.getElementById('waifu-tool-switch-model')
-    if (changeModelBtn) break
-    tryCount += 1
-    await Plugins.sleep(1000)
-  }
-
-  // 点击切换模型按钮时，获取模型ID，然后APP换肤
-  const colorMap = {
-    5: 'rgb(166,131,216)',
-    6: 'rgb(212,224,236)',
-    0: 'rgb(80,60,83)',
-    1: 'rgb(250,245,132)',
-    2: 'rgb(93,147,219)',
-    3: 'rgba(116,194,255)',
-    4: 'rgb(209,122,83)'
-  }
-
-  if (changeModelBtn) {
-    changeModelBtn.onclick = () => {
-      const modelId = localStorage.getItem('modelId')
-      const modelTexturesId = localStorage.getItem('modelTexturesId')
-      console.log(modelId, modelTexturesId)
-      document.documentElement.style.setProperty('--primary-color', colorMap[modelId])
-      document.documentElement.style.setProperty('--secondary-color', colorMap[modelId])
+/** 动态加载外部资源 */
+function loadExternalResource(url, type) {
+  return new Promise((resolve, reject) => {
+    let tag
+    if (type === 'css') {
+      tag = document.createElement('link')
+      tag.rel = 'stylesheet'
+      tag.href = url
+    } else if (type === 'js') {
+      tag = document.createElement('script')
+      tag.src = url
     }
+    if (tag) {
+      tag.onload = () => resolve(url)
+      tag.onerror = () => reject(new Error(`Failed to load: ${url}`))
+      document.head.appendChild(tag)
+    }
+  })
+}
+
+/** 构建 DOM 结构（canvas + 工具栏 + 关闭按钮） */
+function createWaifuDOM() {
+  const waifu = document.createElement('div')
+  waifu.id = 'waifu'
+  waifu.innerHTML = `
+    <canvas id="live2d" width="800" height="800"></canvas>
+    <div id="waifu-tool">
+      <span id="waifu-tool-quit" title="关闭">
+        <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 320 512" width="16" height="16">
+          <path fill="currentColor" d="M310.6 150.6c12.5-12.5 12.5-32.8 0-45.3s-32.8-12.5-45.3 0L160 210.7 54.6 105.4c-12.5-12.5-32.8-12.5-45.3 0s-12.5 32.8 0 45.3L114.7 256 9.4 361.4c-12.5 12.5-12.5 32.8 0 45.3s32.8 12.5 45.3 0L160 301.3 265.4 406.6c12.5 12.5 32.8 12.5 45.3 0s12.5-32.8 0-45.3L205.3 256 310.6 150.6z"/>
+        </svg>
+      </span>
+    </div>
+  `
+  document.body.appendChild(waifu)
+
+  const quitBtn = document.getElementById('waifu-tool-quit')
+  quitBtn.addEventListener('click', () => {
+    waifu.style.bottom = '-1000px'
+    setTimeout(() => {
+      waifu.style.display = 'none'
+    }, 500)
+  })
+
+  return waifu
+}
+
+/** 核心加载逻辑 */
+const loadLive2DWidget = async () => {
+  if (screen.width < 768) return
+  if (document.getElementById('waifu')) return
+
+  try {
+    // 加载 CSS + live2d.min.js（核心渲染引擎）
+    // 不加载 waifu-tips.js，因为它不支持自定义 model 路径
+    await Promise.all([
+      loadExternalResource(LIVE2D_CDN + 'waifu.css', 'css'),
+      loadExternalResource(LIVE2D_CDN + 'live2d.min.js', 'js')
+    ])
+
+    // 创建 DOM
+    createWaifuDOM()
+
+    // 等一帧确保 DOM 渲染
+    await new Promise(r => setTimeout(r, 100))
+
+    // 直接调用 loadlive2d 加载珂朵莉模型
+    // loadlive2d(canvasId, modelJsonUrl) 是 live2d.min.js 暴露的全局函数
+    loadlive2d('live2d', CTHOLLY_MODEL_URL)
+
+    // 入场动画
+    const waifu = document.getElementById('waifu')
+    if (waifu) {
+      waifu.style.bottom = '0'
+    }
+
+    console.log('[Live2D] 珂朵莉加载完成')
+  } catch (err) {
+    console.error('[Live2D] 加载失败:', err)
   }
 }
 

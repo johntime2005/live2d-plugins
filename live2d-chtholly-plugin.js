@@ -37,18 +37,19 @@ const loadLive2DWidget = async () => {
     style.textContent = `
       #chtholly-wrapper {
         position: fixed;
-        bottom: 80px;
-        right: 20px;
+        right: 0;
+        bottom: 0;
         width: 250px;
-        height: 400px;
+        height: 350px;
         overflow: hidden;
         z-index: 9999;
       }
       #chtholly-wrapper canvas {
-        display: block;
+        position: absolute;
+        right: 0;
+        bottom: 0;
         width: 250px;
-        height: 250px;
-        transform: translateY(-50px);
+        height: 500px;
       }
     `
     document.head.appendChild(style)
@@ -58,8 +59,10 @@ const loadLive2DWidget = async () => {
 
     const canvas = document.createElement('canvas')
     canvas.id = 'live2d'
+    // 800x1600: aspect=2, view y-range=-2..2, 够容纳完整模型头部
+    // CSS 250x500 保持同比例, wrapper 350px 裁掉底部多余
     canvas.width = 800
-    canvas.height = 800
+    canvas.height = 1600
     wrapper.appendChild(canvas)
 
     document.body.appendChild(wrapper)

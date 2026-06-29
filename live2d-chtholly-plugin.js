@@ -28,31 +28,45 @@ function loadExternalResource(url, type) {
 
 const loadLive2DWidget = async () => {
   if (screen.width < 768) return
-  if (document.getElementById('live2d')) return
+  if (document.getElementById('live2d-wrapper')) return
 
   try {
     await loadExternalResource(LIVE2D_CDN + 'live2d.min.js', 'js')
 
     const style = document.createElement('style')
     style.textContent = `
-      #live2d {
+      #live2d-wrapper {
         position: fixed;
         left: 10px;
         bottom: 10px;
-        width: 160px;
-        height: 320px;
+        width: 250px;
+        height: 350px;
+        overflow: hidden;
         z-index: 1;
+      }
+
+      #live2d {
+        position: absolute;
+        left: 0;
+        top: 0;
+        width: 250px;
+        height: 500px;
+        display: block;
       }
     `
     document.head.appendChild(style)
 
+    const wrapper = document.createElement('div')
+    wrapper.id = 'live2d-wrapper'
+
     const canvas = document.createElement('canvas')
     canvas.id = 'live2d'
-    // 800x1600: aspect=2, view y-range=-2..2. CSS displays the full canvas at 200x400.
+    // 800x1600 keeps the model's native 1:2 aspect while the wrapper crops the lower body.
     canvas.width = 800
     canvas.height = 1600
 
-    document.body.appendChild(canvas)
+    wrapper.appendChild(canvas)
+    document.body.appendChild(wrapper)
 
     await new Promise(r => setTimeout(r, 100))
 

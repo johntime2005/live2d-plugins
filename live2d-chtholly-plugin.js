@@ -1,13 +1,4 @@
 /** @type {EsmPlugin} */
-/**
- * 本插件使用项目：https://github.com/stevenjoezhang/live2d-widget
- * 珂朵莉模型来源：https://github.com/akikowork/chtholly_kanban
- * 另外：插件系统不推荐动态载入js、css，因此此插件并不符合规范！
- *
- * === 修复说明 ===
- * 原版 bug: initWidget() 只认 apiPath / cdnPath，不认 model.jsonPath
- * 修复方案: 跳过 waifu-tips.js（widget wrapper），直接用 live2d.min.js 的 loadlive2d()
- */
 export default (Plugin) => {
   const CTHOLLY_MODEL_URL = 'https://cdn.jsdelivr.net/gh/akikowork/chtholly_kanban@master/chtholly/assets/chtholly.model.json'
   const LIVE2D_CDN = 'https://fastly.jsdelivr.net/gh/stevenjoezhang/live2d-widget@latest/'
@@ -32,7 +23,7 @@ export default (Plugin) => {
     })
   }
 
-  /** 构建 DOM 结构（canvas + 工具栏 + 关闭按钮） */
+  /** 构建 DOM 结构（canvas + 关闭按钮） */
   function createWaifuDOM() {
     const waifu = document.createElement('div')
     waifu.id = 'waifu'
@@ -94,13 +85,18 @@ export default (Plugin) => {
     }
   }
 
+  /* 触发器 手动触发 */
   const onRun = async () => {
     await loadLive2DWidget()
   }
 
+  /* 触发器 APP就绪后 */
   const onReady = () => {
     Plugin.AutoStart && loadLive2DWidget()
   }
 
-  return { onRun, onReady }
+  return {
+    onRun,
+    onReady
+  }
 }

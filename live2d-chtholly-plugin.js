@@ -2,6 +2,8 @@
 export default (Plugin) => {
   const CTHOLLY_MODEL_URL = 'https://cdn.jsdelivr.net/gh/akikowork/chtholly_kanban@master/chtholly/assets/chtholly.model.json'
   const LIVE2D_CDN = 'https://fastly.jsdelivr.net/gh/stevenjoezhang/live2d-widget@latest/'
+  const WIDTH = 250
+  const HEIGHT = 500
 
   /** 动态加载外部资源 */
   function loadExternalResource(url, type) {
@@ -23,87 +25,82 @@ export default (Plugin) => {
     })
   }
 
-  /** 注入自定义样式覆盖 */
-  function injectCustomStyles() {
+  /** 注入所有样式 */
+  function injectStyles() {
     const style = document.createElement('style')
     style.textContent = `
-      #waifu {
-        position: fixed !important;
-        bottom: 0 !important;
-        right: 0 !important;
-        left: auto !important;
-        z-index: 999;
-        overflow: visible;
-      }
-      #waifu canvas#live2d {
-        width: 200px;
-        height: 400px;
-      }
-      #waifu-tool {
-        position: absolute;
-        bottom: 10px;
+      #chtholly-live2d {
+        position: fixed;
+        bottom: 0;
         right: 10px;
-        display: flex;
-        gap: 4px;
+        z-index: 9999;
+        pointer-events: none;
       }
-      #waifu-tool span {
+      #chtholly-live2d canvas {
+        pointer-events: auto;
+      }
+      #chtholly-live2d .close-btn {
+        position: absolute;
+        top: 5px;
+        right: 5px;
+        width: 20px;
+        height: 20px;
         cursor: pointer;
-        opacity: 0.6;
-        transition: opacity 0.2s;
+        opacity: 0;
+        transition: opacity 0.3s;
+        pointer-events: auto;
+        color: #fff;
+        text-shadow: 0 0 4px rgba(0,0,0,0.5);
+        font-size: 18px;
+        line-height: 20px;
+        text-align: center;
       }
-      #waifu-tool span:hover {
+      #chtholly-live2d:hover .close-btn {
+        opacity: 0.7;
+      }
+      #chtholly-live2d .close-btn:hover {
         opacity: 1;
       }
     `
     document.head.appendChild(style)
   }
 
-  /** 构建 DOM 结构（canvas + 关闭按钮） */
-  function createWaifuDOM() {
-    const waifu = document.createElement('div')
-    waifu.id = 'waifu'
-    waifu.innerHTML = `
-      <canvas id="live2d" width="800" height="800"></canvas>
-      <div id="waifu-tool">
-        <span id="waifu-tool-quit" title="关闭">
-          <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 320 512" width="16" height="16">
-            <path fill="currentColor" d="M310.6 150.6c12.5-12.5 12.5-32.8 0-45.3s-32.8-12.5-45.3 0L160 210.7 54.6 105.4c-12.5-12.5-32.8-12.5-45.3 0s-12.5 32.8 0 45.3L114.7 256 9.4 361.4c-12.5 12.5-12.5 32.8 0 45.3s32.8 12.5 45.3 0L160 301.3 265.4 406.6c12.5 12.5 32.8 12.5 45.3 0s12.5-32.8 0-45.3L205.3 256 310.6 150.6z"/>
-          </svg>
-        </span>
-      </div>
+  /** 创建 DOM */
+  function createDOM() {
+    const wrapper = document.createElement('div')
+    wrapper.id = 'chtholly-live2d'
+    wrapper.innerHTML = `
+      <canvas id="live2d" width="${WIDTH}" height="${HEIGHT}"></canvas>
+      <div class="close-btn" title="关闭">&times;</div>
     `
-    document.body.appendChild(waifu)
+    document.body.appendChild(wrapper)
 
-    const quitBtn = document.getElementById('waifu-tool-quit')
-    quitBtn.addEventListener('click', () => {
-      waifu.style.display = 'none'
+    wrapper.querySelector('.close-btn').addEventListener('click', () => {
+      wrapper.style.display = 'none'
     })
 
-    return waifu
+    return wrapper
   }
 
   /** 核心加载逻辑 */
   const loadLive2DWidget = async () => {
     if (screen.width < 768) return
-    if (document.getElementById('waifu')) return
+    if (document.getElementById('chtholly-live2d')) return
 
     try {
-      // 加载 CSS + live2d.min.js（核心渲染引擎）
-      await Promise.all([
-        loadExternalResource(LIVE2D_CDN + 'waifu.css', 'css'),
-        loadExternalResource(LIVE2D_CDN + 'live2d.min.js', 'js')
-      ])
+      // 只加载 live2d.min.js（渲染引擎），不加载 waifu.css
+      await loadExternalResource(LIVE2D_CDN + 'live2d.min.js', 'js')
 
-      // 注入自定义样式覆盖默认定位
-      injectCustomStyles()
+      // 注入自定义样式
+      injectStyles()
 
       // 创建 DOM
-      createWaifuDOM()
+      createDOM()
 
-      // 等一帧确保 DOM 渲染
+      // 等 DOM 渲染
       await new Promise(r => setTimeout(r, 200))
 
-      // 直接调用 loadlive2d 加载珂朵莉模型
+      // 加载珂朵莉模型
       loadlive2d('live2d', CTHOLLY_MODEL_URL)
 
       console.log('[Live2D] 珂朵莉加载完成')

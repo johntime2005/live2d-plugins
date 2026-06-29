@@ -28,27 +28,46 @@ function loadExternalResource(url, type) {
 
 const loadLive2DWidget = async () => {
   if (screen.width < 768) return
-  if (document.getElementById('live2d')) return
+  if (document.getElementById('chtholly-wrapper')) return
 
   try {
-    // 只加载渲染引擎
     await loadExternalResource(LIVE2D_CDN + 'live2d.min.js', 'js')
 
-    // 样式：固定右下角
+    // wrapper: 固定右下角，固定显示大小，overflow裁剪
+    // canvas: 800x800 高分辨率渲染，CSS缩到300x300，translateY下移露出头部
     const style = document.createElement('style')
-    style.textContent = '#live2d{position:fixed;bottom:0;right:0;z-index:9999}'
+    style.textContent = `
+      #chtholly-wrapper {
+        position: fixed;
+        bottom: 0;
+        right: 0;
+        width: 300px;
+        height: 300px;
+        overflow: hidden;
+        z-index: 9999;
+      }
+      #chtholly-wrapper canvas {
+        display: block;
+        width: 300px;
+        height: 300px;
+        transform: translateY(30px);
+      }
+    `
     document.head.appendChild(style)
 
-    // canvas 保持正方形（和原版 widget 的 800x800 同比例）
+    const wrapper = document.createElement('div')
+    wrapper.id = 'chtholly-wrapper'
+
     const canvas = document.createElement('canvas')
     canvas.id = 'live2d'
-    canvas.width = 300
-    canvas.height = 300
-    document.body.appendChild(canvas)
+    canvas.width = 800
+    canvas.height = 800
+    wrapper.appendChild(canvas)
+
+    document.body.appendChild(wrapper)
 
     await new Promise(r => setTimeout(r, 100))
 
-    // loadlive2d 是 live2d.min.js 暴露的全局函数
     loadlive2d('live2d', CTHOLLY_MODEL_URL)
 
     console.log('[Live2D] 珂朵莉加载完成')

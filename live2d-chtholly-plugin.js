@@ -33,24 +33,21 @@ const loadLive2DWidget = async () => {
   try {
     await loadExternalResource(LIVE2D_CDN + 'live2d.min.js', 'js')
 
-    // wrapper: 固定右下角，固定显示大小，overflow裁剪
-    // canvas: 800x800 高分辨率渲染，CSS缩到300x300，translateY下移露出头部
     const style = document.createElement('style')
     style.textContent = `
       #chtholly-wrapper {
         position: fixed;
         bottom: 0;
         right: 0;
-        width: 300px;
-        height: 300px;
+        width: 250px;
+        height: 350px;
         overflow: hidden;
         z-index: 9999;
       }
       #chtholly-wrapper canvas {
         display: block;
-        width: 300px;
-        height: 300px;
-        transform: translateY(30px);
+        width: 250px;
+        height: 500px;
       }
     `
     document.head.appendChild(style)
@@ -60,8 +57,10 @@ const loadLive2DWidget = async () => {
 
     const canvas = document.createElement('canvas')
     canvas.id = 'live2d'
+    // 竖长canvas：宽800 高1600 → 视口 y范围 -2 到 2，能容纳整个模型
+    // CSS显示: 250x500，从wrapper底部往上显示350px（裁掉底部多余空白）
     canvas.width = 800
-    canvas.height = 800
+    canvas.height = 1600
     wrapper.appendChild(canvas)
 
     document.body.appendChild(wrapper)

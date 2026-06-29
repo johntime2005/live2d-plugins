@@ -23,6 +23,41 @@ export default (Plugin) => {
     })
   }
 
+  /** 注入自定义样式覆盖 */
+  function injectCustomStyles() {
+    const style = document.createElement('style')
+    style.textContent = `
+      #waifu {
+        position: fixed !important;
+        bottom: 0 !important;
+        right: 0 !important;
+        left: auto !important;
+        z-index: 999;
+        overflow: visible;
+      }
+      #waifu canvas#live2d {
+        width: 200px;
+        height: 400px;
+      }
+      #waifu-tool {
+        position: absolute;
+        bottom: 10px;
+        right: 10px;
+        display: flex;
+        gap: 4px;
+      }
+      #waifu-tool span {
+        cursor: pointer;
+        opacity: 0.6;
+        transition: opacity 0.2s;
+      }
+      #waifu-tool span:hover {
+        opacity: 1;
+      }
+    `
+    document.head.appendChild(style)
+  }
+
   /** 构建 DOM 结构（canvas + 关闭按钮） */
   function createWaifuDOM() {
     const waifu = document.createElement('div')
@@ -41,10 +76,7 @@ export default (Plugin) => {
 
     const quitBtn = document.getElementById('waifu-tool-quit')
     quitBtn.addEventListener('click', () => {
-      waifu.style.bottom = '-1000px'
-      setTimeout(() => {
-        waifu.style.display = 'none'
-      }, 500)
+      waifu.style.display = 'none'
     })
 
     return waifu
@@ -57,27 +89,22 @@ export default (Plugin) => {
 
     try {
       // 加载 CSS + live2d.min.js（核心渲染引擎）
-      // 不加载 waifu-tips.js，因为它不支持自定义 model 路径
       await Promise.all([
         loadExternalResource(LIVE2D_CDN + 'waifu.css', 'css'),
         loadExternalResource(LIVE2D_CDN + 'live2d.min.js', 'js')
       ])
 
+      // 注入自定义样式覆盖默认定位
+      injectCustomStyles()
+
       // 创建 DOM
       createWaifuDOM()
 
       // 等一帧确保 DOM 渲染
-      await new Promise(r => setTimeout(r, 100))
+      await new Promise(r => setTimeout(r, 200))
 
       // 直接调用 loadlive2d 加载珂朵莉模型
-      // loadlive2d(canvasId, modelJsonUrl) 是 live2d.min.js 暴露的全局函数
       loadlive2d('live2d', CTHOLLY_MODEL_URL)
-
-      // 入场动画
-      const waifu = document.getElementById('waifu')
-      if (waifu) {
-        waifu.style.bottom = '0'
-      }
 
       console.log('[Live2D] 珂朵莉加载完成')
     } catch (err) {

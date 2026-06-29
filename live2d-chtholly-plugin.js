@@ -28,44 +28,31 @@ function loadExternalResource(url, type) {
 
 const loadLive2DWidget = async () => {
   if (screen.width < 768) return
-  if (document.getElementById('chtholly-wrapper')) return
+  if (document.getElementById('live2d')) return
 
   try {
     await loadExternalResource(LIVE2D_CDN + 'live2d.min.js', 'js')
 
     const style = document.createElement('style')
     style.textContent = `
-      #chtholly-wrapper {
+      #live2d {
         position: fixed;
         right: 0;
         bottom: 0;
-        width: 250px;
-        height: 350px;
-        overflow: hidden;
+        width: 200px;
+        height: 400px;
         z-index: 9999;
-      }
-      #chtholly-wrapper canvas {
-        position: absolute;
-        right: 0;
-        bottom: 0;
-        width: 250px;
-        height: 500px;
       }
     `
     document.head.appendChild(style)
 
-    const wrapper = document.createElement('div')
-    wrapper.id = 'chtholly-wrapper'
-
     const canvas = document.createElement('canvas')
     canvas.id = 'live2d'
-    // 800x1600: aspect=2, view y-range=-2..2, 够容纳完整模型头部
-    // CSS 250x500 保持同比例, wrapper 350px 裁掉底部多余
+    // 800x1600: aspect=2, view y-range=-2..2. CSS displays the full canvas at 200x400.
     canvas.width = 800
     canvas.height = 1600
-    wrapper.appendChild(canvas)
 
-    document.body.appendChild(wrapper)
+    document.body.appendChild(canvas)
 
     await new Promise(r => setTimeout(r, 100))
 
